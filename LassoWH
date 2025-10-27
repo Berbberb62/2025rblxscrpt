@@ -8,8 +8,7 @@ local player = Players.LocalPlayer
 
 -- 🖼️ Animal images / tracked models
 local animalImages = {
- ["Elepant"] = "https://drive.google.com/uc?export=view&id=1jkot99uQbfCcHoaLpJA-YTlskSq_JM2v",
-	["Dragon"] = "https://drive.google.com/uc?export=view&id=1jkot99uQbfCcHoaLpJA-YTlskSq_JM2v",
+	["Chicken"] = "https://drive.google.com/uc?export=view&id=1jkot99uQbfCcHoaLpJA-YTlskSq_JM2v",
 	["Golden Dragon"] = "https://drive.google.com/uc?export=view&id=1bLDSMOgviKIPN5OKo3ngpX17HpzBoEkO",
 	["Griffin"] = "https://drive.google.com/uc?export=view&id=1VRZTQ1xdH_vRbo1TSTLGtZ7wm1yMI5jS",
 	["Hydra"] = "https://drive.google.com/uc?export=view&id=17FyXm7DkNReJo3i5ls3gtPUw4ENNk1de",
