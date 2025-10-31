@@ -1,4 +1,4 @@
--- 🔗 Webhook Animal Tracker + Plot Kitsune Scanner (with Join Link + Player Count)
+-- 🔗 Webhook Animal Tracker + Plot Kitsune Scanner (with Join Link + Player Count + Weight + Unique Detection)
 local WEBHOOK1 = "https://discord.com/api/webhooks/1432020181441581229/vYYXG0DP-OBFZRgxxWtuY_kHuXOnTWVO_k9DsvsiZYNkAs4UlvGQ2opHfQPtg_OS_pAU"
 local WEBHOOK2 = "https://discord.com/api/webhooks/1432390622312009750/g2IoaQ41zf_cho5ySXJGRgAOc3ohc6rYEDiNhHr3rJZKadfjloo-j2oXWQMF2L1ofm4a"
 local WEBHOOK3 = "https://discord.com/api/webhooks/1433651417003982889/rvqz3XxkV1q20PhPoQaBhPaHUWjKwuY6HGKdj41mmiJDffOpkHFEA_ot1hhYHA36daOb"
@@ -68,8 +68,25 @@ local function sendAnimalWebhook(name, weight, imageUrl)
 	elseif request then request(req) end
 end
 
--- 🌐 Send Kitsune found in Plots to WEBHOOK3 (with Join Link + Player Count)
-local function sendKitsuneWebhook(plotName)
+-- 🦊 Track which Kitsune were already sent (by unique model)
+local sentKitsune = {}
+
+-- 🌐 Send Kitsune found in Plots to WEBHOOK3 (with Join Link + Player Count + Weight)
+local function sendKitsuneWebhook(plotName, animal)
+	if not animal or not animal:IsA("Model") then return end
+	if sentKitsune[animal] then return end -- ✅ Skip if already sent
+
+	sentKitsune[animal] = true -- Mark this specific Kitsune as sent
+
+	local weightValue = "Unknown"
+	local info = animal:FindFirstChild("Info")
+	if info then
+		local weight = info:FindFirstChild("Weight")
+		if weight and weight:IsA("ValueBase") then
+			weightValue = tostring(weight.Value)
+		end
+	end
+
 	local joinLink = string.format("roblox://placeId=%s&gameInstanceId=%s", placeId, serverId)
 	local playerCount = #Players:GetPlayers()
 
@@ -78,6 +95,7 @@ local function sendKitsuneWebhook(plotName)
 		color = 16753920,
 		fields = {
 			{ name = "Plot", value = plotName, inline = true },
+			{ name = "Weight", value = weightValue or "Unknown", inline = true },
 			{ name = "Players in Server", value = tostring(playerCount), inline = true },
 			{ name = "Server ID", value = serverId, inline = false },
 			{ name = "Copy Link", value = string.format("```\n%s\n```", joinLink), inline = false }
@@ -85,6 +103,7 @@ local function sendKitsuneWebhook(plotName)
 		image = { url = animalImages["Kitsune"] },
 		footer = { text = "Detected via Plot Scan" }
 	}
+
 	local payload = HttpService:JSONEncode({ embeds = { embed } })
 	local req = { Url = WEBHOOK3, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = payload }
 
@@ -122,10 +141,11 @@ end
 -- 🦊 Scan all Plots for Kitsune
 local function scanPlotsForKitsune()
 	for _, plot in ipairs(plotsFolder:GetChildren()) do
-		if plot:FindFirstChild("Animals") then
-			for _, animal in ipairs(plot.Animals:GetChildren()) do
+		local animals = plot:FindFirstChild("Animals")
+		if animals then
+			for _, animal in ipairs(animals:GetChildren()) do
 				if animal.Name == "Kitsune" then
-					sendKitsuneWebhook(plot.Name)
+					sendKitsuneWebhook(plot.Name, animal)
 				end
 			end
 		end
@@ -147,7 +167,7 @@ animalsFolder.ChildAdded:Connect(function(animal)
 	end)
 end)
 
--- 🔁 Scan all plots periodically (every 10 seconds)
+-- 🔁 Periodic scan (still checks every 10s, but only sends new Kitsunes)
 task.spawn(function()
 	while task.wait(10) do
 		scanPlotsForKitsune()
